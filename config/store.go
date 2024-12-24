@@ -23,6 +23,7 @@ func GetPineconeStore(llm *openai.LLM) (*pinecone.Store, error) {
 		pinecone.WithNameSpace(utils.GetEnv("PINECONE_NAMESPACE", "")),
 		pinecone.WithHost(utils.GetEnv("PINECONE_HOST", "")),
 	)
+
 	if err != nil {
 		utils.Error("error initializing Pinecone store: %w", err)
 		return nil, err

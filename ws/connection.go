@@ -59,8 +59,6 @@ func HandleConnection(conn *websocket.Conn) {
 	messageHistory = append(messageHistory, llms.TextParts(llms.ChatMessageTypeSystem, prompt))
 	messageHistory = append(messageHistory, llms.TextParts(llms.ChatMessageTypeSystem, "El id del usuario es (userId): "+userID))
 
-	log.Println("Message History: ", messageHistory)
-
 	for {
 		// Leer mensaje del cliente
 		_, msg, err := conn.ReadMessage()
@@ -139,7 +137,6 @@ func HandleConnection(conn *websocket.Conn) {
 
 		// Agregar mensaje del bot al historial
 		messageHistory = append(messageHistory, llms.TextParts(llms.ChatMessageTypeSystem, resp.Choices[0].Content))
-		log.Println("Message History: ", messageHistory)
 
 	}
 }

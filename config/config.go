@@ -4,7 +4,6 @@ import (
 	"os"
 
 	"github.com/tmc/langchaingo/llms/openai"
-
 )
 
 var (

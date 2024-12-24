@@ -1,0 +1,5 @@
+[build]
+command = "cd ./cmd && go build -tags netgo -ldflags '-s -w' -o ./out/executable"
+
+[start]
+command = "./cmd/out/executable"
