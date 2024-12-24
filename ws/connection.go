@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/tmc/langchaingo/llms"
 
@@ -14,6 +15,7 @@ import (
 	"langtools/message"
 	"langtools/tools"
 	"langtools/utils"
+
 )
 
 type Message struct {
@@ -30,7 +32,7 @@ func HandleConnection(conn *websocket.Conn) {
 	defer conn.Close()
 
 	// Simular un ID único por usuario
-	userID := conn.RemoteAddr().String()
+	userID := uuid.New().String()
 
 	// Cargar prompt inicial
 	prompt, err := config.LoadPrompt("static/prompt.txt")
@@ -95,8 +97,6 @@ func HandleConnection(conn *websocket.Conn) {
 
 		// Guardar historial en memoria
 		memory.UpdateHistory(userID, messageHistory)
-
-		messageHistory = append(messageHistory, llms.TextParts(llms.ChatMessageTypeSystem, "Recuerda no incluir imagenes o links en tus mensajes."))
 
 		// Generar respuesta final
 		resp, err = llm.GenerateContent(ctx, messageHistory, llms.WithTools(availableTools))
