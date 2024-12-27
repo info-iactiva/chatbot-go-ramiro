@@ -1,12 +1,15 @@
 package tools
 
-import "github.com/tmc/langchaingo/llms"
+import (
+	"github.com/tmc/langchaingo/llms"
+
+)
 
 // Registrar herramientas disponibles
 func RegisterTools() []llms.Tool {
 	return []llms.Tool{
-		// GetWeatherTool(),
 		NewPineconeToolLLM(),
+		NewMongoDBToolLLM(),
 	}
 }
 

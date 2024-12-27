@@ -50,6 +50,13 @@ func HandleToolCall(ctx context.Context, tool llms.Tool, args string, store *pin
 			return "Error executing Pinecone search."
 		}
 		return response
+	case "saveChatToMongoDB":
+		response, err := tools.ExecuteMongoDBTool(ctx, args)
+		if err != nil {
+			log.Printf("Error executing MongoDB tool: %v", err)
+			return "Error saving chat to MongoDB."
+		}
+		return response
 	default:
 		return "Tool not supported."
 	}

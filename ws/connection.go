@@ -15,7 +15,6 @@ import (
 	"langtools/message"
 	"langtools/tools"
 	"langtools/utils"
-
 )
 
 type Message struct {
@@ -27,7 +26,6 @@ type FormattedResult struct {
 	Metadata    map[string]interface{} `json:"metadata"`
 }
 
-var memory = NewMemory() // Memoria global
 func HandleConnection(conn *websocket.Conn) {
 	defer conn.Close()
 
@@ -57,7 +55,7 @@ func HandleConnection(conn *websocket.Conn) {
 	ctx := context.Background()
 
 	// Crear historial inicial con el prompt
-	messageHistory := memory.GetHistory(userID)
+	messageHistory := globals.GlobalMemory.GetHistory(userID)
 	messageHistory = append(messageHistory, llms.TextParts(llms.ChatMessageTypeSystem, prompt))
 	messageHistory = append(messageHistory, llms.TextParts(llms.ChatMessageTypeSystem, "El id del usuario es (userId): "+userID))
 
@@ -96,7 +94,7 @@ func HandleConnection(conn *websocket.Conn) {
 		messageHistory = handlers.ExecuteToolCalls(ctx, messageHistory, resp, pineconeStore)
 
 		// Guardar historial en memoria
-		memory.UpdateHistory(userID, messageHistory)
+		globals.GlobalMemory.UpdateHistory(userID, messageHistory)
 
 		// Generar respuesta final
 		resp, err = llm.GenerateContent(ctx, messageHistory, llms.WithTools(availableTools))
@@ -108,9 +106,14 @@ func HandleConnection(conn *websocket.Conn) {
 		// log.Println("Pinecone Results Cache:" + utils.PrettyPrint(globals.PineconeResultsCache))
 
 		if resp.Choices[0].Content == "" {
-			utils.Info("No content to send.")
-			messageHistory = append(messageHistory, llms.TextParts(llms.ChatMessageTypeHuman, string(parsedMsg.Message)))
-			continue
+			utils.Error("No content to send.", nil)
+			// messageHistory = append(messageHistory, llms.TextParts(llms.ChatMessageTypeHuman, string(parsedMsg.Message)))
+			// continue
+			err := SendResponse(conn, "success", "Hubo un error, intente más tarde.", nil)
+			if err != nil {
+				utils.Error("Error sending response: %v", err)
+				break
+			}
 		}
 		utils.Info("Sending to " + userID + ": " + resp.Choices[0].Content)
 		results, ok := globals.PineconeResultsCache[userID]
