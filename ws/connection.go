@@ -8,13 +8,14 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/tmc/langchaingo/llms"
+	"github.com/tmc/langchaingo/schema"
 
 	"langtools/config"
-	"langtools/globals"
 	"langtools/handlers"
 	"langtools/message"
 	"langtools/tools"
 	"langtools/utils"
+
 )
 
 type Message struct {
@@ -29,6 +30,9 @@ type FormattedResult struct {
 func HandleConnection(conn *websocket.Conn) {
 	defer conn.Close()
 
+	var messageHistory []llms.MessageContent
+	var results []schema.Document
+	var chatID string
 	// Simular un ID único por usuario
 	userID := uuid.New().String()
 
@@ -55,7 +59,7 @@ func HandleConnection(conn *websocket.Conn) {
 	ctx := context.Background()
 
 	// Crear historial inicial con el prompt
-	messageHistory := globals.GlobalMemory.GetHistory(userID)
+	// messageHistory = globals.GlobalMemory.GetHistory(userID)
 	messageHistory = append(messageHistory, llms.TextParts(llms.ChatMessageTypeSystem, prompt))
 	messageHistory = append(messageHistory, llms.TextParts(llms.ChatMessageTypeSystem, "El id del usuario es (userId): "+userID))
 
@@ -66,9 +70,6 @@ func HandleConnection(conn *websocket.Conn) {
 			log.Printf("Error reading message: %v", err)
 			break
 		}
-
-		// Delete Pinecone Results Cache
-		globals.PineconeResultsCache[userID] = nil
 
 		// Parsear el mensaje
 		var parsedMsg Message
@@ -82,6 +83,18 @@ func HandleConnection(conn *websocket.Conn) {
 		// Agregar mensaje del usuario al historial
 		messageHistory = append(messageHistory, llms.TextParts(llms.ChatMessageTypeHuman, string(parsedMsg.Message)))
 
+		if chatID == "" {
+			// Crear chat en MongoDB
+			chatID, err = tools.CreateEmptyChat(ctx, userID)
+			if err != nil {
+				log.Printf("Error creating chat: %v", err)
+				return
+			}
+
+			messageHistory = append(messageHistory, llms.TextParts(llms.ChatMessageTypeSystem, "el chatId de la conversación es (chatId): "+chatID))
+			utils.Info("el chatId de la conversación es (chatId): " + chatID)
+		}
+
 		// Generar respuesta inicial
 		resp, err := llm.GenerateContent(ctx, messageHistory, llms.WithTools(availableTools))
 		if err != nil {
@@ -89,12 +102,21 @@ func HandleConnection(conn *websocket.Conn) {
 			break
 		}
 
+		log.Println("initial resp: ", resp.Choices[0].Content)
+		// Sí se solicitaron herramientas, ejecutarlas, si no regresar el mensaje inicial.
+		if len(resp.Choices[0].ToolCalls) == 0 {
+			log.Println("No tool calls")
+			err := SendResponse(conn, "success", resp.Choices[0].Content, nil)
+			if err != nil {
+				log.Printf("Error sending response: %v", err)
+				break
+			}
+			continue
+		}
+
 		// Actualizar historial y ejecutar herramientas
 		messageHistory = message.UpdateHistory(messageHistory, resp)
-		messageHistory = handlers.ExecuteToolCalls(ctx, messageHistory, resp, pineconeStore)
-
-		// Guardar historial en memoria
-		globals.GlobalMemory.UpdateHistory(userID, messageHistory)
+		messageHistory, results = handlers.ExecuteToolCalls(ctx, messageHistory, resp, pineconeStore)
 
 		// Generar respuesta final
 		resp, err = llm.GenerateContent(ctx, messageHistory, llms.WithTools(availableTools))
@@ -114,12 +136,10 @@ func HandleConnection(conn *websocket.Conn) {
 				utils.Error("Error sending response: %v", err)
 				break
 			}
+			continue
 		}
-		utils.Info("Sending to " + userID + ": " + resp.Choices[0].Content)
-		results, ok := globals.PineconeResultsCache[userID]
-		if !ok || len(results) == 0 {
-			utils.Info("No results found or tool not used.")
-
+		if len(results) == 0 {
+			log.Println("No pinecone results")
 			// Respuesta genérica con resultados nulos
 			err := SendResponse(conn, "success", resp.Choices[0].Content, nil)
 			if err != nil {
@@ -140,6 +160,12 @@ func HandleConnection(conn *websocket.Conn) {
 
 		// Agregar mensaje del bot al historial
 		messageHistory = append(messageHistory, llms.TextParts(llms.ChatMessageTypeSystem, resp.Choices[0].Content))
+
+		// Actualiza la conversación en mongo con el historial
+		err = tools.UpdateChatHistory(chatID, userID, messageHistory)
+		if err != nil {
+			log.Printf("Error updating chat history: %v", err)
+		}
 
 	}
 }

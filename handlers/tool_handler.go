@@ -5,16 +5,19 @@ import (
 	"log"
 
 	"github.com/tmc/langchaingo/llms"
+	"github.com/tmc/langchaingo/schema"
 	"github.com/tmc/langchaingo/vectorstores/pinecone"
 
 	"langtools/tools"
 	"langtools/utils"
 )
 
-func ExecuteToolCalls(ctx context.Context, messageHistory []llms.MessageContent, resp *llms.ContentResponse, store *pinecone.Store) []llms.MessageContent {
+func ExecuteToolCalls(ctx context.Context, messageHistory []llms.MessageContent, resp *llms.ContentResponse, store *pinecone.Store) ([]llms.MessageContent, []schema.Document) {
+	var records []schema.Document
+	var response string
 	for _, toolCall := range resp.Choices[0].ToolCalls {
 		utils.Info("Executing tool call: " + toolCall.FunctionCall.Name)
-		response := HandleToolCall(ctx, tools.GetToolByName(toolCall.FunctionCall.Name), toolCall.FunctionCall.Arguments, store)
+		response, records = HandleToolCall(ctx, tools.GetToolByName(toolCall.FunctionCall.Name), toolCall.FunctionCall.Arguments, store)
 
 		toolResponse := llms.MessageContent{
 			Role: llms.ChatMessageTypeTool,
@@ -26,38 +29,44 @@ func ExecuteToolCalls(ctx context.Context, messageHistory []llms.MessageContent,
 				},
 			},
 		}
+		log.Printf("Tool call response: %v", toolResponse)
 		messageHistory = append(messageHistory, toolResponse)
 	}
-	return messageHistory
+	return messageHistory, records
 }
 
-func HandleToolCall(ctx context.Context, tool llms.Tool, args string, store *pinecone.Store) string {
+func HandleToolCall(ctx context.Context, tool llms.Tool, args string, store *pinecone.Store) (string, []schema.Document) {
 	pineconeTool := tools.NewPineconeTool(store)
 
-	// Crear una instancia de la herramienta.
+	results := []schema.Document{}
+
 	switch tool.Function.Name {
-	case "getCurrentWeather":
-		response, err := tools.ExecuteWeatherTool(args)
-		if err != nil {
-			log.Printf("Error executing weather tool: %v", err)
-			return "Error fetching weather."
-		}
-		return response
 	case "pineconeSearch":
-		response, err := pineconeTool.Execute(ctx, args)
+		log.Printf("Executing Pinecone search with args: %v", args)
+		response, results, err := pineconeTool.Execute(ctx, args)
+		log.Printf("Pinecone search results: %v", results)
 		if err != nil {
 			log.Printf("Error executing Pinecone search: %v", err)
-			return "Error executing Pinecone search."
+			return "Error executing Pinecone search.", results
 		}
-		return response
-	case "saveChatToMongoDB":
+
+		return response, results
+	case "loadDataIntoMongoDB":
 		response, err := tools.ExecuteMongoDBTool(ctx, args)
 		if err != nil {
 			log.Printf("Error executing MongoDB tool: %v", err)
-			return "Error saving chat to MongoDB."
+			return "Error saving chat to MongoDB.", results
 		}
-		return response
+		return response, results
+
+	// case "updateChatInMongoDB":
+	// 	response, err := tools.ExecuteUpdateMongoDBTool(ctx, args, messageHistory)
+	// 	if err != nil {
+	// 		log.Printf("Error executing MongoDB tool: %v", err)
+	// 		return "Error updating chat in MongoDB.", results
+	// 	}
+	// 	return response, results
 	default:
-		return "Tool not supported."
+		return "Tool not supported.", results
 	}
 }

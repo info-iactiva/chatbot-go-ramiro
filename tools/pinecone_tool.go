@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 
 	"github.com/tmc/langchaingo/llms"
+	"github.com/tmc/langchaingo/schema"
 	"github.com/tmc/langchaingo/vectorstores/pinecone"
 
 	"langtools/globals"
@@ -58,15 +58,15 @@ func NewPineconeToolLLM() llms.Tool {
 }
 
 // Ejecutar búsqueda con Pinecone
-func (t *PineconeTool) Execute(ctx context.Context, argsJson string) (string, error) {
+func (t *PineconeTool) Execute(ctx context.Context, argsJson string) (string, []schema.Document, error) {
 	var args PineconeSearchArgs
 	if err := json.Unmarshal([]byte(argsJson), &args); err != nil {
-		return "", fmt.Errorf("invalid arguments for Pinecone search: %v", err)
+		return "", nil, fmt.Errorf("invalid arguments for Pinecone search: %v", err)
 	}
 
 	results, err := t.store.SimilaritySearch(ctx, args.Query, args.Limit)
 	if err != nil {
-		return "", fmt.Errorf("error performing Pinecone search: %w", err)
+		return "", nil, fmt.Errorf("error performing Pinecone search: %w", err)
 	}
 
 	if args.UserID == "" {
@@ -76,11 +76,10 @@ func (t *PineconeTool) Execute(ctx context.Context, argsJson string) (string, er
 	utils.Info("Saving Pinecone results for user: " + args.UserID)
 	globals.PineconeResultsCache[args.UserID] = results
 
-	log.Printf("Pinecone results: %v", globals.PineconeResultsCache[args.UserID])
 	response, err := json.Marshal(results)
 	if err != nil {
-		return "", fmt.Errorf("error marshaling results: %w", err)
+		return "", nil, fmt.Errorf("error marshaling results: %w", err)
 	}
 
-	return string(response), nil
+	return string(response), results, nil
 }

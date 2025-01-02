@@ -5,7 +5,6 @@ import (
 
 	"langtools/router"
 	"langtools/utils"
-
 )
 
 func Run() error {
@@ -14,6 +13,9 @@ func Run() error {
 
 	// Inicializar router
 	r := router.NewRouter()
+
+	// Print PID for debugging
+	utils.Info("PID: " + utils.GetPID())
 
 	// Configurar el servidor HTTP
 	serverAddress := ":5000"

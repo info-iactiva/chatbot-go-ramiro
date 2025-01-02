@@ -1,6 +1,9 @@
 package utils
 
 import (
+	"path/filepath"
+	"runtime"
+
 	"go.uber.org/zap"
 
 )
@@ -20,6 +23,11 @@ func InitLogger() {
 
 // Info registra información general
 func Info(msg string, fields ...zap.Field) {
+	_, file, line, ok := runtime.Caller(1)
+	if ok {
+		file = filepath.Join(filepath.Base(filepath.Dir(file)), filepath.Base(file))
+		fields = append(fields, zap.String("file", file), zap.Int("line", line))
+	}
 	Logger.Info(msg, fields...)
 }
 
@@ -27,4 +35,3 @@ func Info(msg string, fields ...zap.Field) {
 func Error(msg string, err error, fields ...zap.Field) {
 	Logger.Error(msg, append(fields, zap.Error(err))...)
 }
-

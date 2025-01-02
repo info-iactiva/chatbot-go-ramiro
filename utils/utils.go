@@ -2,7 +2,10 @@ package utils
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
+	"os"
+
 )
 
 // PrettyPrint returns a pretty-printed JSON string of the given data
@@ -13,5 +16,10 @@ func PrettyPrint(data interface{}) string {
 		return ""
 	}
 	return string(prettyJSON)
+}
 
+
+// Get pid of the current process
+func GetPID() string {
+	return fmt.Sprintf("%d", os.Getpid())
 }
