@@ -3,10 +3,10 @@ package tools
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 
+	"langtools/utils"
 )
 
 func UploadFileToSharePoint(filePath string, fileName string) error {
@@ -49,16 +49,7 @@ func UploadFileToSharePoint(filePath string, fileName string) error {
 	}
 	defer resp.Body.Close()
 
-	fmt.Println("Response Status:", resp.Status)
-	fmt.Println("Response Headers:", resp.Header)
+	utils.Info("File uploaded successfully to SharePoint")
 
-	// Verificar el resultado
-	if resp.StatusCode != http.StatusCreated {
-		body, _ := io.ReadAll(resp.Body)
-		fmt.Println("Response Body:", string(body))
-		return fmt.Errorf("failed to upload file to SharePoint: %s", string(body))
-	}
-
-	fmt.Println("File uploaded successfully to SharePoint!")
 	return nil
 }

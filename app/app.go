@@ -34,8 +34,8 @@ func Run() error {
 			}
 		}
 
-		// Configura el scheduler para las 12:00 am de todos los días
-		handlers.StartScheduler("0 0 * * *", excelTask)
+		// Configura el scheduler para las 12:30 am de todos los días
+		handlers.StartScheduler("0 30 * * *", excelTask)
 	}()
 
 	// Print PID for debugging
