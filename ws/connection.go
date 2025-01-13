@@ -15,7 +15,6 @@ import (
 	"langtools/message"
 	"langtools/tools"
 	"langtools/utils"
-
 )
 
 type Message struct {
@@ -159,7 +158,7 @@ func HandleConnection(conn *websocket.Conn) {
 		}
 
 		// Agregar mensaje del bot al historial
-		messageHistory = append(messageHistory, llms.TextParts(llms.ChatMessageTypeSystem, resp.Choices[0].Content))
+		messageHistory = append(messageHistory, llms.TextParts(llms.ChatMessageTypeAI, resp.Choices[0].Content))
 
 		// Actualiza la conversación en mongo con el historial
 		err = tools.UpdateChatHistory(chatID, userID, messageHistory)

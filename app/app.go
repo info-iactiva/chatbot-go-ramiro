@@ -2,11 +2,12 @@ package app
 
 import (
 	"net/http"
+	"time"
 
-	"langtools/handlers"
 	"langtools/router"
 	"langtools/tools"
 	"langtools/utils"
+
 )
 
 func Run() error {
@@ -33,9 +34,10 @@ func Run() error {
 				utils.Error("Error uploading to SharePoint", err)
 			}
 		}
-
+		time.Sleep(10 * time.Second)
 		// Configura el scheduler para las 12:30 am de todos los días
-		handlers.StartScheduler("30 0 * * *", excelTask)
+		excelTask()
+		// handlers.StartScheduler("30 0 * * *", excelTask)
 	}()
 
 	// Print PID for debugging

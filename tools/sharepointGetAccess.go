@@ -56,8 +56,6 @@ func GetAccessToken() (string, error) {
 			break
 		}
 
-		log.Printf("Block Type: %s\n", block.Type)
-
 		// Procesar el certificado
 		if block.Type == "CERTIFICATE" {
 			cert, err := x509.ParseCertificate(block.Bytes)
@@ -97,7 +95,6 @@ func GetAccessToken() (string, error) {
 		return "", fmt.Errorf("private key not found")
 	}
 
-	log.Println("Certificate and private key successfully parsed")
 	// Calcular el thumbprint SHA-256 del certificado
 	thumbprint := sha256.Sum256(certificate.Raw)
 	thumbprintEncoded := base64.RawURLEncoding.EncodeToString(thumbprint[:])
@@ -153,70 +150,5 @@ func GetAccessToken() (string, error) {
 		return "", fmt.Errorf("error decoding token response: %w", err)
 	}
 
-	log.Printf("Access token: %s\n", tokenResp.AccessToken)
 	return tokenResp.AccessToken, nil
 }
-
-// package tools
-
-// import (
-// 	"bytes"
-// 	"encoding/json"
-// 	"fmt"
-// 	"io/ioutil"
-// 	"log"
-// 	"net/http"
-// 	"os"
-// )
-
-// type TokenResponse struct {
-// 	AccessToken string `json:"access_token"`
-// 	ExpiresIn   int    `json:"expires_in"`
-// 	TokenType   string `json:"token_type"`
-// }
-
-// // GetAccessToken obtiene un access_token desde Azure AD
-// func GetAccessToken() (string, error) {
-// 	tenantID := os.Getenv("SPAAuth_TENANTID")
-// 	clientID := os.Getenv("SPAAuth_CLIENTID")
-// 	clientSecret := os.Getenv("SPAAuth_CLIENTSECRET")
-
-// 	if tenantID == "" || clientID == "" || clientSecret == "" {
-// 		return "", fmt.Errorf("missing environment variables: SPAAuth_TENANTID, SPAAuth_CLIENTID, or SPAAuth_CLIENTSECRET")
-// 	}
-
-// 	tokenURL := fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/v2.0/token", tenantID)
-// 	data := fmt.Sprintf(
-// 		"client_id=%s&client_secret=%s&grant_type=client_credentials&scope=https://%s.sharepoint.com/.default",
-// 		clientID, clientSecret, tenantID,
-// 	)
-
-// 	req, err := http.NewRequest("POST", tokenURL, bytes.NewBufferString(data))
-// 	if err != nil {
-// 		return "", fmt.Errorf("error creating token request: %w", err)
-// 	}
-
-// 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-// 	client := &http.Client{}
-// 	resp, err := client.Do(req)
-// 	if err != nil {
-// 		return "", fmt.Errorf("error sending token request: %w", err)
-// 	}
-// 	defer resp.Body.Close()
-
-// 	if resp.StatusCode != http.StatusOK {
-// 		body, _ := ioutil.ReadAll(resp.Body)
-// 		return "", fmt.Errorf("failed to get access token: %s", string(body))
-// 	}
-
-// 	var tokenResp TokenResponse
-// 	err = json.NewDecoder(resp.Body).Decode(&tokenResp)
-// 	if err != nil {
-// 		return "", fmt.Errorf("error decoding token response: %w", err)
-// 	}
-
-// 	log.Printf("Access token: %s\n", tokenResp.AccessToken)
-
-// 	return tokenResp.AccessToken, nil
-// }

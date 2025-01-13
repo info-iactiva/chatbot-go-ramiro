@@ -5,17 +5,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/xuri/excelize/v2"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-
 )
 
 func GenerateExcel() (string, string, error) {
-
 	mongoURI := "mongodb+srv://admin:admin@cluster0.zgyky.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(mongoURI))
 	if err != nil {
@@ -30,9 +30,19 @@ func GenerateExcel() (string, string, error) {
 	// Conexión a la base de datos y colección
 	db := client.Database("dessa-chats")
 	collection := db.Collection("chats")
-	fmt.Println("Conexión exitosa a MongoDB.")
+	Info("Conexión exitosa a MongoDB.")
 
-	// Obtener registros
+	// Filtrar documentos por fecha actual (día del servidor)
+	// startOfDay := time.Now().Truncate(24 * time.Hour)
+	// endOfDay := startOfDay.Add(24 * time.Hour)
+
+	// filter := bson.M{
+	// 	"createdAt": bson.M{
+	// 		"$gte": startOfDay,
+	// 		"$lt":  endOfDay,
+	// 	},
+	// }
+
 	cursor, err := collection.Find(context.TODO(), bson.M{})
 	if err != nil {
 		log.Fatalf("Error al obtener documentos: %v", err)
@@ -45,7 +55,7 @@ func GenerateExcel() (string, string, error) {
 	}
 
 	if len(records) == 0 {
-		fmt.Println("La colección está vacía. No hay datos para exportar.")
+		fmt.Println("No hay datos para exportar del día actual.")
 		return "", "", nil
 	}
 
@@ -53,27 +63,8 @@ func GenerateExcel() (string, string, error) {
 	f := excelize.NewFile()
 	sheetName := "Sheet1"
 
-	// Convertir registros BSON a JSON
-	data, err := json.Marshal(records)
-	if err != nil {
-		log.Fatalf("Error al convertir registros a JSON: %v", err)
-	}
-
-	// Convertir JSON a un mapa para procesar columnas
-	var rows []map[string]interface{}
-	if err := json.Unmarshal(data, &rows); err != nil {
-		log.Fatalf("Error al convertir JSON a mapa: %v", err)
-	}
-
-	// Procesar columnas y filas
-	headers := []string{}
-	if len(rows) > 0 {
-		for header := range rows[0] {
-			headers = append(headers, header)
-		}
-	}
-
-	// Escribir encabezados
+	// Procesar datos
+	headers := []string{"ID", "Fecha Creación", "Conversación", "Correo", "Nombre", "Actualizado"}
 	for colIndex, header := range headers {
 		cell := fmt.Sprintf("%s1", string(rune('A'+colIndex)))
 		if err := f.SetCellValue(sheetName, cell, header); err != nil {
@@ -81,25 +72,101 @@ func GenerateExcel() (string, string, error) {
 		}
 	}
 
-	// Escribir datos
-	for rowIndex, row := range rows {
-		for colIndex, header := range headers {
-			cell := fmt.Sprintf("%s%d", string(rune('A'+colIndex)), rowIndex+2)
-			value := row[header]
+	// Iterar sobre los registros y escribir filas en Excel
+	for rowIndex, record := range records {
+		colIndex := 0 // Reiniciar el índice de columna para cada fila
 
-			// Formatear fechas
-			if header == "updatedAt" || header == "createdAt" {
-				if t, ok := value.(string); ok {
-					parsedTime, err := time.Parse(time.RFC3339, t)
-					if err == nil {
-						value = parsedTime.Format("2006-01-02 15:04:05")
+		// ID
+		if id, ok := record["_id"]; ok {
+			cell := fmt.Sprintf("%s%d", string(rune('A'+colIndex)), rowIndex+2)
+			f.SetCellValue(sheetName, cell, id)
+			colIndex++
+		}
+
+		// Fecha Creación
+		if createdAt, ok := record["createdAt"].(primitive.DateTime); ok {
+			cell := fmt.Sprintf("%s%d", string(rune('A'+colIndex)), rowIndex+2)
+			f.SetCellValue(sheetName, cell, createdAt.Time().Format("2006-01-02 15:04:05"))
+			colIndex++
+		}
+
+		// Conversación
+		if history, ok := record["history"].(primitive.A); ok {
+			log.Printf("Historial de conversación: ENTRO")
+			conversation := []string{}
+			for _, entry := range history {
+				// log.Printf("Tipo de entrada en history: %T, Valor: %+v", entry, entry)
+
+				// Revisar si es un map[string]interface{} o un tipo BSON específico
+				switch v := entry.(type) {
+				case primitive.M: // Manejar primitive.M
+					log.Printf("Es un primitive.M: %+v", v)
+
+					// Extraer el campo "text" como JSON
+					if textField, ok := v["text"].(string); ok {
+						var textData map[string]interface{}
+						if err := json.Unmarshal([]byte(textField), &textData); err == nil {
+							log.Printf("Texto deserializado: %+v", textData)
+
+							// Extraer role y text del JSON deserializado
+							if role, ok := textData["role"].(string); ok {
+								if message, ok := textData["text"].(string); ok {
+									if role == "human" {
+										conversation = append(conversation, fmt.Sprintf("- Usuario: %s", message))
+									} else if role == "ai" {
+										conversation = append(conversation, fmt.Sprintf("- AI: %s", message))
+									}
+								}
+							} else {
+								log.Printf("No existe el campo 'role' en el texto deserializado: %+v", textData)
+							}
+						} else {
+							log.Printf("Error al deserializar el campo 'text': %v", err)
+						}
+					} else {
+						log.Printf("El campo 'text' no es una string o no existe.")
 					}
+				case map[string]interface{}: // En caso de que sea un map normal
+					log.Printf("Es un map[string]interface{}: %+v", v)
+					if role, ok := v["role"].(string); ok {
+						if text, ok := v["text"].(string); ok {
+							if role == "human" {
+								conversation = append(conversation, fmt.Sprintf("- Usuario: %s", text))
+							} else if role == "ai" {
+								conversation = append(conversation, fmt.Sprintf("- AI: %s", text))
+							}
+						}
+					}
+				default:
+					log.Printf("Tipo inesperado en history: %T, Valor: %+v", entry, entry)
 				}
 			}
+			cell := fmt.Sprintf("%s%d", string(rune('A'+colIndex)), rowIndex+2)
+			f.SetCellValue(sheetName, cell, strings.Join(conversation, "\n"))
+			colIndex++
+		} else {
+			log.Printf("El campo history no es un primitive.A o está vacío para el documento ID: %v", record["_id"])
+		}
 
-			if err := f.SetCellValue(sheetName, cell, value); err != nil {
-				log.Fatalf("Error al escribir valor en Excel: %v", err)
-			}
+		// Correo
+		if mail, ok := record["mail"].(string); ok {
+			cell := fmt.Sprintf("%s%d", string(rune('A'+colIndex)), rowIndex+2)
+			f.SetCellValue(sheetName, cell, mail)
+			colIndex++
+		}
+
+		// Nombre
+		if name, ok := record["name"].(string); ok {
+			cell := fmt.Sprintf("%s%d", string(rune('A'+colIndex)), rowIndex+2)
+			f.SetCellValue(sheetName, cell, name)
+			colIndex++
+		}
+
+		// Actualizado
+		if updatedAt, ok := record["updatedAt"].(primitive.DateTime); ok {
+			cell := fmt.Sprintf("%s%d", string(rune('A'+colIndex)), rowIndex+2)
+			f.SetCellValue(sheetName, cell, updatedAt.Time().Format("2006-01-02 15:04:05"))
+			colIndex++
 		}
 	}
 
@@ -113,6 +180,6 @@ func GenerateExcel() (string, string, error) {
 		log.Fatalf("Error al guardar archivo Excel: %v", err)
 	}
 
-	fmt.Printf("Datos exportados a %s con éxito.\n", outputFile)
+	Info(fmt.Sprintf("Datos exportados a %s con éxito.\n", outputFile))
 	return outputFile, fileName, nil
 }

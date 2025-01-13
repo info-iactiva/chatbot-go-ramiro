@@ -30,7 +30,6 @@ func UploadFileToSharePoint(filePath string, fileName string) error {
 	// Construir la URL para la subida del archivo
 	relativeURL := "/sites/DESSAMUEBLES-iActiva/Reportes%20chatbot"
 	uploadURL := fmt.Sprintf("%s/_api/web/GetFolderByServerRelativeUrl('%s')/Files/add(url='%s',overwrite=true)", siteURL, relativeURL, fileName)
-	fmt.Println("Upload URL:", uploadURL)
 
 	// Crear la solicitud HTTP
 	req, err := http.NewRequest("POST", uploadURL, bytes.NewReader(fileData))
