@@ -33,17 +33,17 @@ func GenerateExcel() (string, string, error) {
 	Info("Conexión exitosa a MongoDB.")
 
 	// Filtrar documentos por fecha actual (día del servidor)
-	// startOfDay := time.Now().Truncate(24 * time.Hour)
-	// endOfDay := startOfDay.Add(24 * time.Hour)
+	startOfDay := time.Now().Truncate(24 * time.Hour)
+	endOfDay := startOfDay.Add(24 * time.Hour)
 
-	// filter := bson.M{
-	// 	"createdAt": bson.M{
-	// 		"$gte": startOfDay,
-	// 		"$lt":  endOfDay,
-	// 	},
-	// }
+	filter := bson.M{
+		"createdAt": bson.M{
+			"$gte": startOfDay,
+			"$lt":  endOfDay,
+		},
+	}
 
-	cursor, err := collection.Find(context.TODO(), bson.M{})
+	cursor, err := collection.Find(context.TODO(), filter)
 	if err != nil {
 		log.Fatalf("Error al obtener documentos: %v", err)
 	}
