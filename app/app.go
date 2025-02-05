@@ -42,9 +42,9 @@ func Run() error {
 
 	// Print PID for debugging
 	utils.Info("PID: " + utils.GetPID())
-
 	// Configurar el servidor HTTP
 	serverAddress := ":5000"
+
 	utils.Info("Starting server on " + serverAddress)
 	if err := http.ListenAndServe(serverAddress, r); err != nil {
 		return err
