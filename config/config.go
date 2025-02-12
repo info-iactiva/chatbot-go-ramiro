@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	OpenAIModel      = os.Getenv("OPENAI_API_KEY")
+	OpenAIModel      = os.Getenv("OPENAI_MODEL")
 	PineconeAPIKey   = os.Getenv("PINECONE_API_KEY")
 	PineconeIndexURL = os.Getenv("PINECONE_INDEX_URL")
 )
