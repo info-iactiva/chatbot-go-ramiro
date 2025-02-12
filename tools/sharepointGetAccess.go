@@ -29,7 +29,7 @@ type TokenResponse struct {
 func GetAccessToken() (string, error) {
 	tenantID := os.Getenv("SPAAuth_TENANTID")
 	clientID := os.Getenv("SPAAuth_CLIENTID")
-	certPath := "SharePointUploaderCertificate.pem"
+	certPath := ""
 
 	if tenantID == "" || clientID == "" {
 		return "", fmt.Errorf("missing environment variables: SPAAuth_TENANTID or SPAAuth_CLIENTID")
