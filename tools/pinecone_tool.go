@@ -33,25 +33,21 @@ func NewPineconeToolLLM() llms.Tool {
 		Type: "function",
 		Function: &llms.FunctionDefinition{
 			Name:        "pineconeSearch",
-			Description: "Busca en la db vectorial de la muebleria Dessa",
+			Description: "Consulta la base de datos de seguros de GNP México para obtener información relevante sobre Gastos Médicos Mayores antes de responder al usuario.",
 			Parameters: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
 					"query": map[string]any{
 						"type":        "string",
-						"description": "The query string to search in Pinecone",
+						"description": "Pregunta del usuario relacionada con seguros de Gastos Médicos Mayores. Por ejemplo: '¿Qué cubre la póliza básica de GNP?'",
 					},
 					"limit": map[string]any{
 						"type":        "integer",
-						"description": "Maximum number of results to return",
+						"description": "Número máximo de resultados relevantes a recuperar de la base de datos. Se recomienda entre 3 y 5.",
 						"minimum":     1,
 					},
-					"userId": map[string]any{
-						"type":        "string",
-						"description": "The user ID to associate with the search results",
-					},
 				},
-				"required": []string{"query", "limit", "userId"},
+				"required": []string{"query", "limit"},
 			},
 		},
 	}

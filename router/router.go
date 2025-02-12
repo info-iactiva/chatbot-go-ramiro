@@ -6,7 +6,6 @@ import (
 	"github.com/gorilla/mux"
 
 	"langtools/ws"
-
 )
 
 // NewRouter crea un nuevo router con soporte para WebSocket
@@ -16,15 +15,13 @@ func NewRouter() *mux.Router {
 	// Ruta para WebSocket
 	r.HandleFunc("/ws", ws.WebSocketHandler).Methods("GET")
 
-
-
-
-
 	// Otras rutas (e.g., para pruebas o salud del servidor)
 	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("Server is healthy!"))
 	}).Methods("GET")
+
+	// r.HandleFunc("/send-email", handlers.SendEmailHandler).Methods("POST")
 
 	return r
 }

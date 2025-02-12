@@ -15,6 +15,7 @@ import (
 	"langtools/message"
 	"langtools/tools"
 	"langtools/utils"
+
 )
 
 type Message struct {
@@ -60,7 +61,7 @@ func HandleConnection(conn *websocket.Conn) {
 	// Crear historial inicial con el prompt
 	// messageHistory = globals.GlobalMemory.GetHistory(userID)
 	messageHistory = append(messageHistory, llms.TextParts(llms.ChatMessageTypeSystem, prompt))
-	messageHistory = append(messageHistory, llms.TextParts(llms.ChatMessageTypeSystem, "El id del usuario es (userId): "+userID))
+	// messageHistory = append(messageHistory, llms.TextParts(llms.ChatMessageTypeSystem, "El id del usuario es (userId): "+userID))
 
 	for {
 		// Leer mensaje del cliente

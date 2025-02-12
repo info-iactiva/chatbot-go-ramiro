@@ -2,13 +2,14 @@ package tools
 
 import (
 	"github.com/tmc/langchaingo/llms"
+
 )
 
 // Registrar herramientas disponibles
 func RegisterTools() []llms.Tool {
 	return []llms.Tool{
 		NewPineconeToolLLM(),
-		NewMongoDBToolLLM(),
+		// NewMongoDBToolLLM(),
 		// NewMongoDBToolUpdateLLM(),
 	}
 }
