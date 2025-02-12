@@ -4,10 +4,11 @@ import (
 	"os"
 
 	"github.com/tmc/langchaingo/llms/openai"
+
 )
 
 var (
-	OpenAIModel      = os.Getenv("OPENAI_MODEL")
+	OpenAIModel      = os.Getenv("OPENAI_API_KEY")
 	PineconeAPIKey   = os.Getenv("PINECONE_API_KEY")
 	PineconeIndexURL = os.Getenv("PINECONE_INDEX_URL")
 )
